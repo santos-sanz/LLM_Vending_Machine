@@ -1,0 +1,5 @@
+timestamp,model,num_weeks,basic_profit,llm_profit,graph_path
+20251223_211701,xiaomi/mimo-v2-flash:free,52,2078.20,4672.90,profit_comparison_20251223_211701.png
+20251223_215845,mistralai/devstral-2512:free,52,1993.30,2319.50,profit_comparison_20251223_215845.png
+20251223_230102,kwaipilot/kat-coder-pro:free,52,2046.60,3420.90,profit_comparison_20251223_230102.png
+20251223_234019,nvidia/nemotron-3-nano-30b-a3b:free,52,2086.90,5353.85,profit_comparison_20251223_234019.png

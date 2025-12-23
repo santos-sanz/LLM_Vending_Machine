@@ -19,4 +19,9 @@ NUM_WEEKS = 52
 
 # LLM Settings
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "google/gemini-2.0-flash-exp:free")
+#DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "xiaomi/mimo-v2-flash:free")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "mistralai/devstral-2512:free")
+
+# Multi-Model Competition Settings
+MODEL_A = "xiaomi/mimo-v2-flash:free"
+MODEL_B = "mistralai/devstral-2512:free"
