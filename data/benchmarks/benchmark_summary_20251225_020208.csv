@@ -1,0 +1,5 @@
+model,avg_basic_profit,avg_llm_profit,win_rate,total_runs
+mistralai/devstral-2512:free,1556.3199999999997,5978.773999999998,100.0,5
+nvidia/nemotron-3-nano-30b-a3b:free,1465.82,4391.380000000021,100.0,5
+nex-agi/deepseek-v3.1-nex-n1:free,1444.4199999999996,2178.3919999999957,100.0,5
+xiaomi/mimo-v2-flash:free,1388.7400000000005,1618.6119999999974,80.0,5

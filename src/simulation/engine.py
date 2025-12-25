@@ -1,5 +1,7 @@
 import random
+import numpy as np
 from src.models.vending_machine import VendingMachine
+from src.config import CLIENT_DISTRIBUTION, CLIENT_LAMBDA, CLIENT_UNIFORM_RANGE
 
 def simulate_week(vending_machine: VendingMachine) -> float:
     print("\n--- Simulating One Week of Operation ---")
@@ -11,7 +13,10 @@ def simulate_week(vending_machine: VendingMachine) -> float:
     vending_machine.apply_maintenance()
 
     # 3. Simulate client purchase attempts
-    clients = random.randint(50, 150)
+    if CLIENT_DISTRIBUTION == "poisson":
+        clients = np.random.poisson(CLIENT_LAMBDA)
+    else:
+        clients = random.randint(*CLIENT_UNIFORM_RANGE)
     print(f"Simulating {clients} purchase attempts...")
     for _ in range(clients):
         # Get product names and their likelihoods
@@ -51,7 +56,10 @@ def simulate_competitive_week(vending_machines: list[VendingMachine], week_numbe
         vm.apply_maintenance()
 
     # 3. Simulate client purchase attempts
-    clients = random.randint(100, 200) # More clients for competition
+    if CLIENT_DISTRIBUTION == "poisson":
+        clients = np.random.poisson(CLIENT_LAMBDA)
+    else:
+        clients = random.randint(*CLIENT_UNIFORM_RANGE)
     print(f"Simulating {clients} purchase attempts across {len(vending_machines)} machines...")
     
     for client_idx in range(1, clients + 1):

@@ -1,65 +1,94 @@
 # LLM Vending Machine Simulation
 
-A modular Python-based simulation of a vending machine operation with potential LLM integration via OpenRouter.
+A modular Python-based simulation of a vending machine operation where multiple AI models compete to optimize pricing and maximize profit.
 
-## Features
+## 🚀 Overview
 
-- **Modular Design**: Separated models, simulation logic, and configuration.
-- **Weekly Simulation**: Simulates product recharging, maintenance costs, and varying client purchase attempts.
-- **Profit/Loss Tracking**: Calculates and tracks financial performance over a 52-week period.
-- **Data Visualization**: Generates a plot of weekly net profit using `matplotlib`.
-- **LLM Ready**: Integrated client for OpenRouter to support future AI-driven features (e.g., dynamic pricing or personalized restocking).
+This project simulates the economic environment of vending machines. It provides a platform to test how different Strategic Business Managers (implemented via LLMs) can adapt to market competition, stockouts, and price sensitivity.
 
-## Project Structure
+## ✨ Features
 
-```
+- **Multi-Model Competition**: Run simulations where different LLMs (e.g., Mistral, DeepSeek, Google) control competing machines.
+- **Dynamic Pricing**: LLMs use tool-calling to adjust prices weekly based on market data and competitor performance.
+- **Realistic Econ-Sim**: Includes maintenance costs, price sensitivity, base likelihood of purchase, and stock management.
+- **Persistence & Analytics**: Results are stored in CSV formats, and performance trends are visualized via automatically generated graphs.
+- **Modular Architecture**: Clean separation between domain models, simulation logic, and AI integration.
+
+## 🏗️ Project Structure
+
+```text
 LLM_Vending_Machine/
 ├── src/
-│   ├── models/           # Domain models (Product, VendingMachine)
-│   ├── simulation/       # Simulation logic (Weekly simulation engine)
-│   ├── llm/             # LLM client integration (OpenRouter)
-│   ├── config.py         # Centralized configuration settings
-│   └── main.py           # Simulation entry point
-├── tests/                # Connectivity and logic tests
-├── .env                  # Environment variables (API keys)
-├── .gitignore            # Git exclusion rules
-└── simulation_results.png # Generated simulation profit plot
+│   ├── models/           # Domain models: Product, VendingMachine
+│   ├── simulation/       # Simulation engines for basic and competitive scenarios
+│   ├── llm/              # OpenRouter client and decision-making tools
+│   ├── utils/            # Shared helpers for plotting and data processing
+│   ├── config.py         # Centralized configuration (Models, Products, PnL settings)
+│   ├── main.py           # Single-machine baseline simulation
+│   ├── competitive_run.py # Baseline vs. LLM competition script
+│   ├── multi_model_run.py # Multi-LLM competition script
+│   └── benchmark.py       # LLM performance benchmarking pipeline
+├── data/results/         # Simulation history and persistence records
+├── tests/                # Unit and connectivity tests
+├── .env                  # Environment variables (OpenRouter API Key)
+└── *.png                 # Generated performance visualizations
 ```
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
 
 - Python 3.12+
-- `pip`
+- [OpenRouter API Key](https://openrouter.ai/)
 
 ### Installation
 
-1. Install dependencies:
+1. **Clone and Install Dependencies**:
    ```bash
    pip install python-dotenv openai matplotlib
    ```
 
-2. Create a `.env` file in the root directory and add your OpenRouter API key:
+2. **Configure Environment**:
+   Create a `.env` file in the root directory:
    ```env
-   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   OPENROUTER_API_KEY=your_key_here
+   DEFAULT_MODEL=mistralai/mistral-7b-instruct:free
    ```
 
-### Running the Simulation
+### Running Simulations
 
-Execute the main simulation script:
-```bash
-python3 src/main.py
-```
-This will run a 52-week simulation and save the resulting profit trend in `simulation_results.png`.
+The project includes four main entry points depending on the complexity you want to simulate:
 
-### Verifying LLM Connectivity
+1. **Basic Baseline**:
+   ```bash
+   python3 src/main.py
+   ```
+   *Runs a single machine with fixed prices to establish a baseline.*
 
-Run the test script to verify your OpenRouter configuration:
-```bash
-PYTHONPATH=. python3 tests/test_llm.py
-```
+2. **Human vs. AI (Baseline vs. LLM)**:
+   ```bash
+   python3 src/competitive_run.py
+   ```
+   *One LLM-controlled machine competes against a fixed-price 'BasicMachine'.*
 
-## License
+3. **AI vs. AI (Multi-Model)**:
+   ```bash
+   python3 src/multi_model_run.py
+   ```
+   *Two different LLM models compete in the same market.*
+
+4. **Benchmarking Pipeline**:
+   ```bash
+   python3 src/benchmark.py
+   ```
+   *Runs multiple simulations across various models and generates a performance summary table.*
+
+## 📊 Monitoring Results
+
+- **Graphs**: Every run generates a `.png` file comparing weekly profits.
+- **Logs**: Detailed market data and LLM reasoning are printed to the console during simulation.
+- **History**: Check `data/results/simulation_history.csv` for a longitudinal record of all simulation runs.
+
+## 🛡️ License
 
 MIT

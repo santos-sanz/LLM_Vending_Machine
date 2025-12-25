@@ -20,8 +20,11 @@ class OpenRouterClient:
             return None
             
         model = model or DEFAULT_MODEL
+        # Log which model is being used for debugging purposes
+        print(f"[LLM Client] Calling OpenRouter with model: {model}")
         for attempt in range(max_retries):
             try:
+                # Adding a timeout to prevent hanging indefinitely
                 response = self.client.chat.completions.create(
                     model=model,
                     messages=[
@@ -31,15 +34,29 @@ class OpenRouterClient:
                     extra_headers={
                         "HTTP-Referer": "https://github.com/santos-sanz/LLM_Vending_Machine",
                         "X-Title": "LLM Vending Machine Simulation",
-                    }
+                    },
+                    timeout=30.0  # 30 seconds timeout
                 )
+                
+                if not response.choices[0].message.content:
+                    print(f"[LLM Client] Warning: Received empty response from model {model}.")
+                    return None
+                    
                 return response.choices[0].message.content
+                
             except Exception as e:
-                if "429" in str(e) and attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 10 # Increase wait time
-                    print(f"Rate limited (429). Waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
+                error_str = str(e)
+                if "429" in error_str and attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 10
+                    print(f"[LLM Client] Rate limited (429). Waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
                     time.sleep(wait_time)
+                elif "timeout" in error_str.lower():
+                    print(f"[LLM Client] Timeout error on attempt {attempt + 1}: {error_str}")
+                    if attempt < max_retries - 1:
+                        time.sleep(2) # Brief pause before retry
+                    else:
+                        return None
                 else:
-                    print(f"Error calling OpenRouter: {e}")
+                    print(f"[LLM Client] Error calling OpenRouter: {error_str}")
                     return None
         return None

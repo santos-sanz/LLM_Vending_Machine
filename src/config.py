@@ -4,7 +4,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Define product configs in a list of dicts
+# --- General Simulation Settings ---
+NUM_WEEKS = 52
+INITIAL_CASH = 500.0
+MAINTENANCE_COST = 20.0
+
+# --- Product Configurations ---
+# Format: {"name": str, "price": float, "cost": float, "stock": int, "max_stock": int, "base_likelihood": float, "price_sensitivity": float}
 PRODUCT_CONFIGS = [
     {"name": "Soda",      "price": 2.50, "cost": 1.00, "stock": 20, "max_stock": 20, "base_likelihood": 0.725, "price_sensitivity": 0.05},
     {"name": "Chips",     "price": 1.75, "cost": 0.75, "stock": 30, "max_stock": 30, "base_likelihood": 0.54,  "price_sensitivity": 0.08},
@@ -12,16 +18,28 @@ PRODUCT_CONFIGS = [
     {"name": "Water",     "price": 1.00, "cost": 0.30, "stock": 50, "max_stock": 50, "base_likelihood": 0.83,  "price_sensitivity": 0.03}
 ]
 
-# Vending Machine Settings
-INITIAL_CASH = 500.0
-MAINTENANCE_COST = 20.0
-NUM_WEEKS = 52
+# Unify both configurations to use the same product set
+COMPETITION_PRODUCT_CONFIGS = PRODUCT_CONFIGS
 
-# LLM Settings
+# --- Client Traffic Settings ---
+CLIENT_DISTRIBUTION = "poisson"  # Options: "poisson", "uniform"
+# Lambda represents the average number of clients per week for Poisson distribution
+CLIENT_LAMBDA = 100
+# Range for uniform distribution fallback
+CLIENT_UNIFORM_RANGE = (50, 150)
+
+# --- LLM Settings ---
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-#DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "xiaomi/mimo-v2-flash:free")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "mistralai/devstral-2512:free")
+# The .env value serves as the primary choice; a hardcoded model as a fallback.
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL") or "nvidia/nemotron-3-nano-30b-a3b:free"
 
-# Multi-Model Competition Settings
+# --- Multi-Model Competition Settings ---
 MODEL_A = "xiaomi/mimo-v2-flash:free"
 MODEL_B = "mistralai/devstral-2512:free"
+
+# --- Output Settings ---
+RESULTS_DIR = "data/results"
+LOGS_DIR = "data/logs"
+IMAGES_DIR = "data/images"
+BENCHMARKS_DIR = "data/benchmarks"
+SIMULATION_RESULTS_CSV = os.path.join(RESULTS_DIR, "simulation_history.csv")

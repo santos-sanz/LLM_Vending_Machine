@@ -52,8 +52,12 @@ def main():
     
     print("Optimization: In a real environment, plt.show() would open a window. "
           "For this environment, we'll save the plot as an image.")
-    plt.savefig('simulation_results.png')
-    print("Plot saved as simulation_results.png")
+    from src.config import IMAGES_DIR
+    import os
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    plot_path = os.path.join(IMAGES_DIR, 'simulation_results.png')
+    plt.savefig(plot_path)
+    print(f"Plot saved as {plot_path}")
     # plt.show() # Uncomment if running in a GUI environment
 
 if __name__ == "__main__":
