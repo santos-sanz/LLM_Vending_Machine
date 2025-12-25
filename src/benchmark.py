@@ -7,8 +7,14 @@ from datetime import datetime
 # from src.competitive_run import run_competition
 from src.config import BENCHMARKS_DIR
 
+import argparse
+
 def main():
-    print("=== LLM Vending Machine Benchmarking Pipeline ===\n")
+    parser = argparse.ArgumentParser(description="LLM Vending Machine Benchmarking")
+    parser.add_argument("--mode", type=str, choices=["agentic", "legacy"], default="agentic", help="Simulation mode")
+    args = parser.parse_args()
+
+    print(f"=== LLM Vending Machine Benchmarking Pipeline ({args.mode.upper()} Mode) ===\n")
 
     # Configuration for the benchmark
     MODELS_TO_TEST = [
@@ -44,9 +50,10 @@ def main():
                 env["PYTHONPATH"] = os.getcwd()
 
                 cmd = [
-                    "python3", "src/competitive_run.py",
+                    "python3", "src/agentic_run.py",
                     "--model", model,
                     "--weeks", "52",
+                    "--mode", args.mode,
                     "--json-output"
                 ]
 

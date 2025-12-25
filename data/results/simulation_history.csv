@@ -55,3 +55,32 @@ timestamp,model,num_weeks,basic_profit,llm_profit,graph_path
 20251225_012147,nex-agi/deepseek-v3.1-nex-n1:free,52,1359.40,3144.30,profit_comparison_nex-agi_deepseek-v3.1-nex-n1_free_20251225_012147.png
 20251225_014036,nex-agi/deepseek-v3.1-nex-n1:free,52,1484.65,2047.22,profit_comparison_nex-agi_deepseek-v3.1-nex-n1_free_20251225_014036.png
 20251225_020205,nex-agi/deepseek-v3.1-nex-n1:free,52,1445.20,1493.41,profit_comparison_nex-agi_deepseek-v3.1-nex-n1_free_20251225_020205.png
+20251225_134543,mistralai/devstral-2512:free (Agent),30,808.65,1998.25,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_134543.png
+20251225_134551,mistralai/devstral-2512:free (Agent),30,850.40,2605.65,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_134551.png
+20251225_135426,mistralai/devstral-2512:free,2,-10.05,4.65,profit_comparison_mistralai_devstral-2512_free_20251225_135426.png
+20251225_140749,xiaomi/mimo-v2-flash:free (Agent),30,819.30,1165.70,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_140749.png
+20251225_141143,xiaomi/mimo-v2-flash:free (Agent),30,784.95,962.65,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_141143.png
+20251225_141430,nvidia/nemotron-3-nano-30b-a3b:free (Agent),30,797.10,1758.40,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_141430.png
+20251225_141806,nvidia/nemotron-3-nano-30b-a3b:free (Agent),30,913.65,1630.55,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_141806.png
+20251225_142240,mistralai/devstral-2512:free (Agent),30,800.35,2676.25,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_142240.png
+20251225_142707,mistralai/devstral-2512:free (Agent),30,808.50,1865.45,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_142707.png
+20251225_144003,nex-agi/deepseek-v3.1-nex-n1:free (Agent),30,778.85,947.74,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_144003.png
+20251225_145231,nex-agi/deepseek-v3.1-nex-n1:free (Agent),30,828.30,1844.60,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_145231.png
+20251225_150308,xiaomi/mimo-v2-flash:free (Agent),52,1445.30,1881.85,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_150308.png
+20251225_150950,xiaomi/mimo-v2-flash:free (Agent),52,1346.70,1490.16,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_150950.png
+20251225_151603,xiaomi/mimo-v2-flash:free (Agent),52,1322.30,1616.63,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_151603.png
+20251225_152251,xiaomi/mimo-v2-flash:free (Agent),52,1332.40,1606.41,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_152251.png
+20251225_152949,xiaomi/mimo-v2-flash:free (Agent),52,1378.40,1669.56,profit_comparison_agentic_xiaomi_mimo-v2-flash_free_20251225_152949.png
+20251225_153505,nvidia/nemotron-3-nano-30b-a3b:free (Agent),52,1481.40,4172.50,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_153505.png
+20251225_154057,nvidia/nemotron-3-nano-30b-a3b:free (Agent),52,1516.80,4601.70,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_154057.png
+20251225_154636,nvidia/nemotron-3-nano-30b-a3b:free (Agent),52,1533.90,5046.55,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_154636.png
+20251225_155301,nvidia/nemotron-3-nano-30b-a3b:free (Agent),52,1415.10,3019.25,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_155301.png
+20251225_155852,nvidia/nemotron-3-nano-30b-a3b:free (Agent),52,1406.20,3692.55,profit_comparison_agentic_nvidia_nemotron-3-nano-30b-a3b_free_20251225_155852.png
+20251225_160706,mistralai/devstral-2512:free (Agent),52,1520.25,4803.33,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_160706.png
+20251225_161549,mistralai/devstral-2512:free (Agent),52,1396.60,3765.10,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_161549.png
+20251225_162326,mistralai/devstral-2512:free (Agent),52,1430.20,3428.15,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_162326.png
+20251225_163145,mistralai/devstral-2512:free (Agent),52,1575.60,6485.20,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_163145.png
+20251225_163953,mistralai/devstral-2512:free (Agent),52,1521.15,5261.70,profit_comparison_agentic_mistralai_devstral-2512_free_20251225_163953.png
+20251225_170426,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,1500.95,2536.34,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_170426.png
+20251225_173355,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,1445.75,2477.32,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_173355.png
+20251225_180037,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,1414.25,2933.20,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_180037.png
