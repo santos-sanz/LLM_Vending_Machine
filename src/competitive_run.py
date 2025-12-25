@@ -5,7 +5,7 @@ from datetime import datetime
 from src.models.product import Product
 from src.models.vending_machine import VendingMachine
 from src.simulation.engine import simulate_competitive_week
-from src.llm.client import OpenRouterClient
+from src.llm.client import create_llm_client
 from src.llm.tools import VendingMachineTools
 from src.config import (
     DEFAULT_MODEL, 
@@ -16,13 +16,14 @@ from src.config import (
 )
 from src.utils.helpers import plot_profits, extract_json_objects
 
-def run_competition(model_name=None, verbose=True, num_weeks=None, save_plot=True, record_history=True):
+def run_competition(model_name=None, verbose=True, num_weeks=None, save_plot=True, record_history=True, mode="online"):
     """
     Runs a competitive simulation between BasicMachine and LLMMachine.
     If model_name is provided, it overrides the DEFAULT_MODEL from config.
     If num_weeks is provided, it overrides the global NUM_WEEKS.
     If save_plot is False, graph generation is skipped.
     If record_history is False, global simulation history is not updated.
+    mode: "online" for OpenRouter, "local" for Ollama (default: "online")
     """
     target_model = model_name if model_name else DEFAULT_MODEL
     sim_weeks = num_weeks if num_weeks is not None else NUM_WEEKS
@@ -53,7 +54,7 @@ def run_competition(model_name=None, verbose=True, num_weeks=None, save_plot=Tru
     weekly_stats = []
 
     # 2. Initialize LLM and Tools
-    llm_client = OpenRouterClient()
+    llm_client = create_llm_client(mode=mode, model_name=target_model)
     tools = VendingMachineTools(machines)
 
     system_prompt = f"""
@@ -271,6 +272,8 @@ def main():
     parser.add_argument("--weeks", type=int, help="Number of weeks to simulate")
     parser.add_argument("--json-output", action="store_true", help="Output results as JSON to stdout")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output (default is True usually, but disabled if json-output is on)")
+    parser.add_argument("--mode", type=str, choices=["local", "online"], default="online", help="Mode: 'local' for Ollama, 'online' for OpenRouter (default: online)")
+    parser.add_argument("--local-model", type=str, help="Local model name for Ollama (only used with --mode local)")
     
     args = parser.parse_args()
 
@@ -285,15 +288,22 @@ def main():
     if verbose:
         print("=== Script 2: Competitive LLM Vending Machine Simulation ===\n")
 
+    # Determine which model to use based on mode
+    model_to_use = args.model
+    if args.mode == "local" and args.local_model:
+        model_to_use = args.local_model
+    elif args.mode == "local" and not model_to_use:
+        # Use default local model if in local mode and no model specified
+        from src.config import DEFAULT_LOCAL_MODEL
+        model_to_use = DEFAULT_LOCAL_MODEL
+    
     result = run_competition(
-        model_name=args.model, 
+        model_name=model_to_use, 
         verbose=verbose, 
         num_weeks=args.weeks,
-        # We can default save_plot and record_history to True for standalone usage,
-        # but the caller (benchmark) might probably ignore the plot path anyway or we can add flags for them later if needed.
-        # For now, keep them True as in original main.
         save_plot=True,
-        record_history=True
+        record_history=True,
+        mode=args.mode
     )
 
     if args.json_output:

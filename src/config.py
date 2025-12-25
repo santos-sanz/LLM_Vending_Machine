@@ -24,14 +24,18 @@ COMPETITION_PRODUCT_CONFIGS = PRODUCT_CONFIGS
 # --- Client Traffic Settings ---
 CLIENT_DISTRIBUTION = "poisson"  # Options: "poisson", "uniform"
 # Lambda represents the average number of clients per week for Poisson distribution
-CLIENT_LAMBDA = 100
+CLIENT_LAMBDA = 12
 # Range for uniform distribution fallback
-CLIENT_UNIFORM_RANGE = (50, 150)
+CLIENT_UNIFORM_RANGE = (0, 50)
 
 # --- LLM Settings ---
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 # The .env value serves as the primary choice; a hardcoded model as a fallback.
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL") or "nvidia/nemotron-3-nano-30b-a3b:free"
+
+# --- Local Model Settings (Ollama) ---
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL") or "http://localhost:11434/v1"
+DEFAULT_LOCAL_MODEL = os.getenv("DEFAULT_LOCAL_MODEL") or "qwen"
 
 # --- Multi-Model Competition Settings ---
 MODEL_A = "xiaomi/mimo-v2-flash:free"
