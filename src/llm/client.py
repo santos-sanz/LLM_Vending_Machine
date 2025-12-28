@@ -1,6 +1,8 @@
 import os
+import torch
 from openai import OpenAI
 from src.config import OPENROUTER_API_KEY, DEFAULT_MODEL
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class OpenRouterClient:
     def __init__(self, api_key=None, base_url="https://openrouter.ai/api/v1"):
@@ -106,12 +108,46 @@ class OllamaClient:
         return None
 
 
+class HuggingFaceClient:
+    """Client for local model inference using Hugging Face Transformers."""
+    def __init__(self, model_name=None, device=None, token=None):
+        self.model_name = model_name or "HuggingFaceTB/SmolLM3-3B"
+        self.token = token or os.getenv("HUGGINGFACE_TOKEN")
+        self.device = device or ("mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
+        
+        print(f"[LLM Client] Loading Hugging Face model: {self.model_name} on {self.device}")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.token)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_name,
+            torch_dtype=torch.float16 if self.device != "cpu" else torch.float32,
+            device_map=self.device,
+            token=self.token
+        )
+
+    def complete(self, prompt, model=None, system_prompt="You are a helpful assistant.", max_retries=1):
+        # model param is ignored as it's set in __init__
+        input_text = f"{system_prompt}\n\n{prompt}"
+        inputs = self.tokenizer(input_text, return_tensors="pt").to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=256,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.9
+            )
+        
+        response = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+        return response.strip()
+
+
 def create_llm_client(mode="online", model_name=None):
     """
     Factory function to create the appropriate LLM client.
     
     Args:
-        mode: "online" for OpenRouter, "local" for Ollama
+        mode: "online" for OpenRouter, "local" for Ollama, "hf" for local Transformers
         model_name: Optional model name override
         
     Returns:
@@ -121,5 +157,7 @@ def create_llm_client(mode="online", model_name=None):
         return OllamaClient()
     elif mode == "online":
         return OpenRouterClient()
+    elif mode == "hf":
+        return HuggingFaceClient(model_name=model_name)
     else:
-        raise ValueError(f"Invalid mode: {mode}. Must be 'local' or 'online'.")
+        raise ValueError(f"Invalid mode: {mode}. Must be 'local', 'online', or 'hf'.")

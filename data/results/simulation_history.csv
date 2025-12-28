@@ -105,3 +105,4 @@ timestamp,model,num_weeks,basic_profit,llm_profit,graph_path
 20251225_230506,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,-794.00,-779.52,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_230506.png
 20251225_232615,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,-826.30,-742.99,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_232615.png
 20251225_234649,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,-810.20,-689.53,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251225_234649.png
+20251226_001041,nex-agi/deepseek-v3.1-nex-n1:free (Agent),52,-805.20,-747.46,profit_comparison_agentic_nex-agi_deepseek-v3.1-nex-n1_free_20251226_001041.png

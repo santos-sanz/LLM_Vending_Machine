@@ -12,5 +12,6 @@ venv/
 ENV/
 *.png
 .DS_Store
-outputs/
+/outputs
+/docs
 

@@ -1,3 +1,4 @@
+import os
 from src.models.product import Product
 
 class VendingMachine:
@@ -17,7 +18,8 @@ class VendingMachine:
         else:
             self.products[product.name] = product
             self.initial_investment += product.stock * product.cost
-        print(f"Added/Updated product {product.name}. Initial investment now: {self.initial_investment:.2f}")
+        if not os.getenv("RL_TRAINING"):
+            print(f"Added/Updated product {product.name}. Initial investment now: {self.initial_investment:.2f}")
 
     def recharge_products(self):
         for product_name, product in self.products.items():
@@ -26,27 +28,33 @@ class VendingMachine:
                 recharge_cost = units_to_recharge * product.cost
                 self.cash -= recharge_cost
                 product.stock = product.max_stock
-                print(f"Recharged {units_to_recharge} units of {product_name}. New cash: {self.cash:.2f}")
+                if not os.getenv("RL_TRAINING"):
+                    print(f"Recharged {units_to_recharge} units of {product_name}. New cash: {self.cash:.2f}")
             else:
-                print(f"Product {product_name} is already at max stock.")
+                if not os.getenv("RL_TRAINING"):
+                    print(f"Product {product_name} is already at max stock.")
 
     def sell_product(self, product_name: str) -> bool:
         product = self.products.get(product_name)
         if product and product.stock > 0:
             product.stock -= 1
             self.cash += product.price
-            print(f"Sold one {product_name}. Cash: {self.cash:.2f}, Stock left: {product.stock}")
+            if not os.getenv("RL_TRAINING"):
+                print(f"Sold one {product_name}. Cash: {self.cash:.2f}, Stock left: {product.stock}")
             return True
         elif product and product.stock == 0:
-            print(f"{product_name} is out of stock.")
+            if not os.getenv("RL_TRAINING"):
+                print(f"{product_name} is out of stock.")
             return False
         else:
-            print(f"Product {product_name} not found.")
+            if not os.getenv("RL_TRAINING"):
+                print(f"Product {product_name} not found.")
             return False
 
     def apply_maintenance(self):
         self.cash -= self.maintenance_cost
-        print(f"Applied maintenance cost of {self.maintenance_cost:.2f}. New cash: {self.cash:.2f}")
+        if not os.getenv("RL_TRAINING"):
+            print(f"Applied maintenance cost of {self.maintenance_cost:.2f}. New cash: {self.cash:.2f}")
 
     def calculate_profit_loss(self) -> float:
         current_value = self.cash + sum(p.stock * p.cost for p in self.products.values())

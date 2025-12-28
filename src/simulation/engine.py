@@ -1,10 +1,12 @@
+import os
 import random
 import numpy as np
 from src.models.vending_machine import VendingMachine
 from src.config import CLIENT_DISTRIBUTION, CLIENT_LAMBDA, CLIENT_UNIFORM_RANGE
 
 def simulate_week(vending_machine: VendingMachine) -> float:
-    print("\n--- Simulating One Week of Operation ---")
+    if not os.getenv("RL_TRAINING"):
+        print("\n--- Simulating One Week of Operation ---")
 
     # 1. Recharging products
     vending_machine.recharge_products()
@@ -17,7 +19,8 @@ def simulate_week(vending_machine: VendingMachine) -> float:
         clients = np.random.poisson(CLIENT_LAMBDA)
     else:
         clients = random.randint(*CLIENT_UNIFORM_RANGE)
-    print(f"Simulating {clients} purchase attempts...")
+    if not os.getenv("RL_TRAINING"):
+        print(f"Simulating {clients} purchase attempts...")
     for _ in range(clients):
         # Get product names and their likelihoods
         product_names = [p.name for p in vending_machine.products.values()]
@@ -39,13 +42,15 @@ def simulate_week(vending_machine: VendingMachine) -> float:
 
     # 4. Calculate the net profit for the week
     weekly_profit_loss = vending_machine.calculate_profit_loss()
-    print(f"End of week cash: {vending_machine.cash:.2f}")
-    print(f"Weekly Net Profit/Loss (cash - initial investment): {weekly_profit_loss:.2f}")
+    if not os.getenv("RL_TRAINING"):
+        print(f"End of week cash: {vending_machine.cash:.2f}")
+        print(f"Weekly Net Profit/Loss (cash - initial investment): {weekly_profit_loss:.2f}")
 
     return weekly_profit_loss
 
 def simulate_competitive_week(vending_machines: list[VendingMachine], week_number: int) -> tuple[list[float], list[str]]:
-    print(f"\n--- Simulating Competitive Week {week_number} of Operation ---")
+    if not os.getenv("RL_TRAINING"):
+        print(f"\n--- Simulating Competitive Week {week_number} of Operation ---")
     stockout_events = []
     reported_stockouts = set() # To only report the first time a product runs out in a week
 
@@ -60,7 +65,8 @@ def simulate_competitive_week(vending_machines: list[VendingMachine], week_numbe
         clients = np.random.poisson(CLIENT_LAMBDA)
     else:
         clients = random.randint(*CLIENT_UNIFORM_RANGE)
-    print(f"Simulating {clients} purchase attempts across {len(vending_machines)} machines...")
+    if not os.getenv("RL_TRAINING"):
+        print(f"Simulating {clients} purchase attempts across {len(vending_machines)} machines...")
     
     for client_idx in range(1, clients + 1):
         # Gather all available products across all machines
@@ -105,6 +111,7 @@ def simulate_competitive_week(vending_machines: list[VendingMachine], week_numbe
     for i, vm in enumerate(vending_machines):
         profit = vm.calculate_profit_loss()
         results.append(profit)
-        print(f"Machine {i} End of week cash: {vm.cash:.2f}, Profit: {profit:.2f}")
+        if not os.getenv("RL_TRAINING"):
+            print(f"Machine {i} End of week cash: {vm.cash:.2f}, Profit: {profit:.2f}")
 
     return results, stockout_events

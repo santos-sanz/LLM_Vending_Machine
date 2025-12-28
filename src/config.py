@@ -7,7 +7,7 @@ load_dotenv()
 # --- General Simulation Settings ---
 NUM_WEEKS = 52
 INITIAL_CASH = 500.0
-MAINTENANCE_COST = 20.0
+MAINTENANCE_COST = 5.0
 
 # --- Product Configurations ---
 # Format: {"name": str, "price": float, "cost": float, "stock": int, "max_stock": int, "base_likelihood": float, "price_sensitivity": float}
@@ -24,7 +24,7 @@ COMPETITION_PRODUCT_CONFIGS = PRODUCT_CONFIGS
 # --- Client Traffic Settings ---
 CLIENT_DISTRIBUTION = "poisson"  # Options: "poisson", "uniform"
 # Lambda represents the average number of clients per week for Poisson distribution
-CLIENT_LAMBDA = 12
+CLIENT_LAMBDA = 25
 # Range for uniform distribution fallback
 CLIENT_UNIFORM_RANGE = (0, 50)
 
