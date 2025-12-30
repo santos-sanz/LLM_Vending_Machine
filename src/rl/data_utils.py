@@ -12,6 +12,7 @@ IMPORTANT RULES:
 1. AT THE START OF EACH WEEK, YOUR MACHINE IS REFILLED TO MAX CAPACITY.
 2. 'BasicMachine' NEVER changes its prices.
 3. Your goal is to maximize NET PROFIT.
+4. You can only change each product's price ONCE per decision. Multiple changes to the same product is penalized.
 
 STRATEGIC ADVICE:
 - Your priority is PROFIT, not just sales volume.
@@ -19,18 +20,23 @@ STRATEGIC ADVICE:
 - If you raise prices, you might sell fewer items, but if the margin increase covers the volume loss, your PROFIT goes up.
 - BasicMachine prices are static. Use this to your advantage.
 - Monitor your Weekly Profit. If a price hike increased profit, keep it or hike further.
+- Be decisive: analyze the data, make ONE price decision per product, then proceed.
 
-AVAILABLE TOOLS (Respond only in JSON):
-1. {"action": "change_price", "parameters": {"machine_name": "LLMMachine", "product_name": "...", "new_price": ...}}
-2. {"action": "next_week"} - to proceed.
+AVAILABLE ACTIONS (Respond in JSON format):
+1. {"action": "change_price", "parameters": {"product_name": "...", "new_price": ...}}
+2. {"action": "next_week"}
 
-Provide your reasoning inside <thought>...</thought> tags, followed by exactly one JSON block.
+RESPONSE FORMAT:
+Change prices for products you want to adjust (ONE change per product max), then call next_week.
+Provide your reasoning inside <thought>...</thought> tags, followed by your JSON actions (one per line).
 
-Example:
+Example Response:
 <thought>
-I will raise the price of Soda because it is currently cheaper than BasicMachine and we are selling out.
+Soda is selling out while Water has low demand. I'll raise Soda price and lower Water price to balance demand.
 </thought>
-{"action": "change_price", "parameters": {"product_name": "Soda", "new_price": 2.5}}
+{"action": "change_price", "parameters": {"product_name": "Soda", "new_price": 3.00}}
+{"action": "change_price", "parameters": {"product_name": "Water", "new_price": 0.80}}
+{"action": "next_week"}
 """
 
 def generate_random_market_data() -> Dict[str, Any]:
@@ -107,7 +113,6 @@ def generate_prompt(idx: int) -> Dict[str, Any]:
     {json.dumps(market_data, indent=2)}
 
     Machines are being refilled NOW. What adjustments will you make for Week {week_num+1}?
-    <thought>
     """
     return {
         "prompt": prompt,

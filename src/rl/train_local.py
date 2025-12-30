@@ -25,6 +25,8 @@ from src.rl.callbacks import MetricsCallback
 
 # Set environment variable to suppress verbose simulation logs
 os.environ["RL_TRAINING"] = "1"
+# Allow MPS to use more memory (prevents OOM during long training)
+os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
 def main():
     # Parse arguments
@@ -50,13 +52,11 @@ def main():
         dataset_size = 10
         save_steps = 1
         num_generations = 2
-        num_sim_weeks = 5
     else:
         max_steps = args.steps
         dataset_size = args.dataset_size
         save_steps = args.save_steps if args.save_steps else max(1, max_steps // 2)
         num_generations = NUM_GENERATIONS
-        num_sim_weeks = 5
     
     print("="*60)
     print("  RL TRAINING (REFACTORED)")
@@ -90,7 +90,7 @@ def main():
     tokenizer.padding_side = "left" # Required for batched generation
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME, 
-        torch_dtype=torch.float16,
+        torch_dtype=torch.float16,  # float16 for memory efficiency on MPS
         device_map=device,
         token=HUGGINGFACE_TOKEN
     )
@@ -122,7 +122,7 @@ def main():
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
         num_generations=num_generations,
-        generation_batch_size=num_generations,
+        generation_batch_size=num_generations,  # Must equal num_generations
         max_completion_length=MAX_COMPLETION_LENGTH,
         max_steps=max_steps,
         save_steps=save_steps,
@@ -134,6 +134,7 @@ def main():
         dataloader_pin_memory=False,
         gradient_checkpointing=True,
         mask_truncated_completions=False,  # Critical: allows learning from truncated completions
+        max_grad_norm=1.0,  # Prevent gradient explosions
     )
 
     # Callback
@@ -143,15 +144,10 @@ def main():
     # Trainer
     print("Initializing trainer...")
     
-    # Wrap profit_reward_func to pass model and tokenizer for multi-turn simulation
-    def interactive_profit_reward(*args, **kwargs):
-        return profit_reward_func(*args, model=model, tokenizer=tokenizer, num_weeks=num_sim_weeks, **kwargs)
-    interactive_profit_reward.__name__ = "profit_reward_func"
-    
     trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
-        reward_funcs=[xml_reward_func, format_reward_func, interactive_profit_reward],
+        reward_funcs=[xml_reward_func, format_reward_func, profit_reward_func],
         args=training_args,
         train_dataset=dataset,
         callbacks=[metrics_callback]
