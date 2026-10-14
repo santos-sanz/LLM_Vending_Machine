@@ -6,6 +6,7 @@ return typed choices. This module wraps that endpoint and maps the answers
 to vending-machine price actions.
 """
 import json
+import os
 import time
 import urllib.request
 
@@ -33,23 +34,54 @@ def product_from_question_key(key: str, product_names):
     return None
 
 
-def build_decision_questions(product_names):
-    """One `choice` question per product over the symmetric price-action menu."""
+def build_product_question(product_name):
+    """One focused `choice` question per product over the price-action menu.
+
+    Decision models are classification-style models: they answer best with a
+    single focused question and a flat product-scoped state (see
+    build_product_state), not a big nested JSON blob.
+    """
     criteria = {k: desc for k, (desc, _) in PRICE_ACTION_MENU.items()}
-    questions = {}
-    for name in product_names:
-        questions[_question_key(name)] = {
+    return {
+        _question_key(product_name): {
             "type": "choice",
             "instructions": (
-                f"Pricing decision for product '{name}' of LLMMachine for next week. "
+                f"Pricing decision for product '{product_name}' of LLMMachine for next week. "
                 "Your goal is to maximize NET PROFIT (margin x volume), not sales volume. "
                 "BasicMachine keeps its prices static; you share the same client pool and clients "
-                "prefer cheaper products. If you sold out last week, there was unmet demand you can "
-                "monetize with higher prices; if stock was left over, consider lower prices or better margins."
+                "prefer cheaper products. A stockout means unmet demand you can monetize with higher "
+                "prices; leftover stock means demand is weak at the current price."
             ),
             "criteria": criteria,
         }
-    return questions
+    }
+
+
+def build_product_state(product_name, market_data, stockout_events, week):
+    """Flat, product-scoped state for one pricing decision."""
+    llm_products = market_data.get("LLMMachine", {}).get("products", {})
+    basic_products = market_data.get("BasicMachine", {}).get("products", {})
+    product = llm_products[product_name]
+    competitor = basic_products.get(product_name, {})
+    stock = product.get("stock", 0)
+    max_stock = product.get("max_stock", 0)
+    if stock == 0:
+        stock_desc = f"0 of {max_stock} (SOLD OUT: unmet demand last week)"
+    else:
+        stock_desc = f"{stock} of {max_stock} left"
+    relevant_stockouts = [e for e in (stockout_events or []) if product_name.lower() in e.lower()]
+    return {
+        "week": str(week),
+        "product": product_name,
+        "your_current_price": str(product.get("price")),
+        "unit_cost": str(product.get("cost")),
+        "competitor_price": str(competitor.get("price")),
+        "stock_left": stock_desc,
+        "purchase_likelihood_at_current_price": str(product.get("likelihood")),
+        "your_machine_total_profit": str(market_data.get("LLMMachine", {}).get("profit_loss")),
+        "competitor_machine_total_profit": str(market_data.get("BasicMachine", {}).get("profit_loss")),
+        "stockouts_last_week": "; ".join(relevant_stockouts) if relevant_stockouts else "none",
+    }
 
 
 def call_decision_model(model, questions, state, max_retries=4, timeout=120.0):
@@ -80,6 +112,28 @@ def call_decision_model(model, questions, state, max_retries=4, timeout=120.0):
                 print(f"[Decisions] Call failed ({str(e)[:140]}). Retrying in {wait}s...")
                 time.sleep(wait)
     raise RuntimeError(f"Decisions API failed after {max_retries} attempts: {last_err}")
+
+
+def decide_prices_for_week(model, market_data, stockout_events, week, verbose=False):
+    """Make one pricing decision per product (one focused API call each).
+
+    Returns a combined answers dict keyed by question key. Products whose call
+    fails after retries are omitted (price kept) so one flaky call cannot
+    derail the whole week.
+    """
+    llm_products = list(market_data.get("LLMMachine", {}).get("products", {}).keys())
+    answers = {}
+    for name in llm_products:
+        questions = build_product_question(name)
+        state = build_product_state(name, market_data, stockout_events, week)
+        if os.getenv("DEBUG_DECISIONS"):
+            print(f"[DEBUG] {model} | {name} question={json.dumps(questions)} state={json.dumps(state)}")
+        try:
+            answer = call_decision_model(model, questions, state)
+            answers.update(answer)
+        except Exception as e:  # noqa: BLE001
+            print(f"[Decisions] {name} decision failed, keeping price: {str(e)[:140]}")
+    return answers
 
 
 def answers_to_price_actions(answers, market_data):

@@ -137,8 +137,8 @@ def main():
     lines.append(f"- Simulation: agentic (LangGraph) mode, {args.weeks} weeks per run, LLMMachine vs static BasicMachine")
     lines.append(f"- Reproducibility: {args.runs} runs per model with paired seeds `{args.seed_base}..{args.seed_base + args.runs - 1}` (every model faces the same seeded demand sequences)")
     lines.append(f"- Providers: nan API (chat models via chat/completions) and OpenRouter (the top-10 weekly "
-                 f"`decisions` models via POST /api/alpha/decisions, adapted to a symmetric ±7.5%/±15% "
-                 f"price-action menu per product)")
+                 f"`decisions` models via POST /api/alpha/decisions: one focused `choice` question per product "
+                 f"over a symmetric ±7.5%/±15% price-action menu, with a flat product-scoped state)")
     lines.append(f"- Exclusions: mimo-v2.6-flash (nan allowance exhausted), minimax-h3 (no key access), "
                  f"gemma4 (reasoning chains overflow the gateway timeout and its 5-request concurrency cap "
                  f"makes full runs unreliable)")
