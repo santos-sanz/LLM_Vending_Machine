@@ -1,10 +1,12 @@
 import json
 import csv
 import os
+import random
 import argparse
 from datetime import datetime
 from typing import TypedDict, Annotated, List, Union, Dict, Any
 import operator
+import numpy as np
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
@@ -15,13 +17,18 @@ from src.models.vending_machine import VendingMachine
 from src.simulation.engine import simulate_competitive_week
 from src.llm.client import OpenRouterClient
 from src.llm.tools import VendingMachineTools
+from src.llm.decisions import build_decision_questions, call_decision_model, answers_to_price_actions
 from src.config import (
-    DEFAULT_MODEL, 
-    COMPETITION_PRODUCT_CONFIGS, 
-    MAINTENANCE_COST, 
-    NUM_WEEKS, 
+    DEFAULT_MODEL,
+    COMPETITION_PRODUCT_CONFIGS,
+    MAINTENANCE_COST,
+    NUM_WEEKS,
     SIMULATION_RESULTS_CSV,
-    OPENROUTER_API_KEY,
+    NAN_API_KEY,
+    NAN_BASE_URL,
+    MODEL_GENERATION_OVERRIDES,
+    OPENROUTER_DECISION_MODELS,
+    resolve_llm_config,
     IMAGES_DIR,
     LOGS_DIR,
     RESULTS_DIR
@@ -126,10 +133,85 @@ def run_simulation_step(state: AgentState):
         "weekly_stats": [weekly_stat]
     }
 
+def decision_model_node(state: AgentState):
+    """
+    Agent step for OpenRouter "decision" models: instead of free-form chat,
+    they answer structured pricing questions over the market state via the
+    /api/alpha/decisions endpoint. The chosen actions are converted into the
+    same JSON tool blocks the chat-based agents emit, so the rest of the
+    pipeline (tool execution, week advance) is shared.
+    """
+    week = state['week']
+    sim_weeks = state['sim_weeks']
+    market_data = state['market_data']
+    stockout_events = state['stockout_events']
+    target_model = state['target_model']
+
+    if week >= sim_weeks:
+        content = json.dumps({"analysis": "Final week completed; no further actions allowed.", "action": "next_week"})
+        return {"messages": [AIMessage(content=content)]}
+
+    state_payload = {
+        "week": week,
+        "stockout_events_last_week": stockout_events or ["No products ran out of stock."],
+        "market_data": market_data,
+        "context": (
+            "You are the Strategic Business Manager of 'LLMMachine', competing with 'BasicMachine'. "
+            "Machines are refilled to max capacity every week. BasicMachine never changes prices. "
+            "Both machines share the same client pool; clients pick products with the best value. "
+            "Maximize NET PROFIT (margin x volume), not revenue or volume."
+        ),
+    }
+
+    llm_products = list(market_data.get("LLMMachine", {}).get("products", {}).keys())
+    questions = build_decision_questions(llm_products)
+
+    if state['verbose']:
+        print(f"\n[Decision Agent] Consulting {target_model} for Week {week}...")
+
+    import time as _time
+    answers = None
+    for attempt in range(4):
+        try:
+            answers = call_decision_model(target_model, questions, state_payload)
+            break
+        except Exception as e:
+            if attempt < 3:
+                wait = (attempt + 1) * 10
+                print(f"[Decision Agent] Call failed ({str(e)[:140]}). Retrying in {wait}s...")
+                _time.sleep(wait)
+            else:
+                print(f"[Decision Agent] All retries failed: {e}")
+
+    if answers is None:
+        # No decisions available: keep prices and advance the week.
+        content = json.dumps({"error": "decisions API unavailable", "action": "next_week"})
+        return {"messages": [AIMessage(content=content)]}
+
+    actions, reasons = answers_to_price_actions(answers, market_data)
+
+    if state['verbose']:
+        print(f"[Decision Agent] Choices: {reasons}")
+
+    if actions:
+        # Emit one change_price block per chosen action. The tools node
+        # advances the week after executing them.
+        blocks = "\n".join(json.dumps({"action": "change_price", "parameters": a}) for a in actions)
+        content = f"Reasoning (structured decision):\n{chr(10).join(reasons)}\n\n{blocks}"
+    else:
+        content = json.dumps({"reasoning": reasons, "action": "next_week"})
+
+    return {"messages": [AIMessage(content=content)]}
+
+
 def model_node(state: AgentState):
     """
     The agent reasons about the current state and decides on actions.
     """
+    # OpenRouter decision models use the structured decisions endpoint.
+    if state['target_model'] in OPENROUTER_DECISION_MODELS:
+        return decision_model_node(state)
+
     week = state['week']
     sim_weeks = state['sim_weeks']
     market_data = state['market_data']
@@ -188,29 +270,56 @@ def model_node(state: AgentState):
         """
 
     # Call LLM
-    # We use ChatOpenAI client wrapper to interface with OpenRouter
+    # We use ChatOpenAI client wrapper to interface with the (OpenAI-compatible) nan API.
+    # Per-model overrides bound the hidden reasoning of "thinking" models (see config).
+    api_key, base_url = resolve_llm_config(state['target_model'])
     llm = ChatOpenAI(
         model=state['target_model'],
-        api_key=OPENROUTER_API_KEY,
-        base_url="https://openrouter.ai/api/v1",
-        default_headers={
-            "HTTP-Referer": "https://github.com/santos-sanz/LLM_Vending_Machine",
-            "X-Title": "LLM Vending Machine Simulation",
-        }
+        api_key=api_key,
+        base_url=base_url,
+        temperature=0.7,
+        timeout=180.0,
+        max_retries=2,
+        **MODEL_GENERATION_OVERRIDES.get(state['target_model'], {}),
     )
-    
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=prompt)
     ]
-    
+
     if state['verbose']:
         print(f"\n[Agent] Thinking for Week {week}...")
-        
-    response = llm.invoke(messages)
-    
+
+    # Retry with backoff: transient gateway timeouts (HTTP 524) and rate limits
+    # can happen under load; give the model a few chances before failing the week.
+    import time as _time
+    response = None
+    for attempt in range(4):
+        try:
+            response = llm.invoke(messages)
+            if response.content and response.content.strip():
+                break
+            # Empty content (all tokens spent on hidden reasoning): retry once
+            # with a nudge, otherwise treat as "no action".
+            if attempt < 3:
+                _time.sleep(2)
+                messages = messages + [response, HumanMessage(content="Respond with the JSON action block now.")]
+                continue
+        except Exception as e:
+            if attempt < 3:
+                wait = (attempt + 1) * 10
+                print(f"[Agent] LLM call failed ({str(e)[:120]}). Retrying in {wait}s...")
+                _time.sleep(wait)
+            else:
+                print(f"[Agent] LLM call failed after all retries: {e}")
+                response = None
+
+    if response is None:
+        return {"messages": [SystemMessage(content=f"[Agent] LLM unavailable for week {week}; no action taken.")]}
+
     if state['verbose']:
-        print(f"[Agent] Response: {response.content}")
+        print(f"[Agent] Response: {response.content[:500]}")
         
     return {"messages": [response]}
 
@@ -372,12 +481,17 @@ builder.add_conditional_edges(
 graph = builder.compile()
 
 # --- 4. Main Execution Wrapper ---
-def run_agentic_competition(model_name=None, num_weeks=None, verbose=True):
+def run_agentic_competition(model_name=None, num_weeks=None, verbose=True, seed=None):
     target_model = model_name or DEFAULT_MODEL
     sim_weeks = num_weeks or NUM_WEEKS
-    
+
     if verbose:
         print(f"--- Starting Agentic Competition: BasicMachine vs {target_model} ({sim_weeks} weeks) ---\n")
+
+    # Seed the RNGs so market stochasticity (demand, client choices) is reproducible.
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
 
     # Initialize Machines
     basic_machine = VendingMachine(initial_cash=0, maintenance_cost=MAINTENANCE_COST, initial_investment=0.0)
@@ -473,6 +587,7 @@ def run_agentic_competition(model_name=None, num_weeks=None, verbose=True):
     return {
         "timestamp": timestamp,
         "model": target_model,
+        "seed": seed,
         "basic_profit": basic_final,
         "llm_profit": llm_final,
         "weekly_stats": weekly_stats
@@ -487,14 +602,15 @@ def main():
     parser.add_argument("--json-output", action="store_true", help="Output results as JSON to stdout")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--mode", type=str, choices=["agentic", "legacy"], default="agentic", help="Simulation mode: 'agentic' (LangGraph) or 'legacy' (Standard Loop)")
-    
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible market stochasticity")
+
     args = parser.parse_args()
-    
+
     verbose = args.verbose
     if not args.json_output and not args.verbose:
         # Default verbose to True for human usage if not explicitly silenced or json output
         verbose = True
-        
+
     if args.mode == "legacy":
         result = run_legacy_competition(
             model_name=args.model,
@@ -507,7 +623,8 @@ def main():
         result = run_agentic_competition(
             model_name=args.model,
             num_weeks=args.weeks,
-            verbose=verbose
+            verbose=verbose,
+            seed=args.seed
         )
     
     if args.json_output:

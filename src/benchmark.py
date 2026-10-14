@@ -3,169 +3,219 @@ import time
 import csv
 import json
 import subprocess
-from datetime import datetime
-# from src.competitive_run import run_competition
-from src.config import BENCHMARKS_DIR
-
 import argparse
+import statistics
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
-def main():
+from src.config import BENCHMARKS_DIR, NAN_CHAT_MODELS, DEFAULT_MODEL
+
+
+def parse_args():
     parser = argparse.ArgumentParser(description="LLM Vending Machine Benchmarking")
     parser.add_argument("--mode", type=str, choices=["agentic", "legacy"], default="agentic", help="Simulation mode")
-    args = parser.parse_args()
+    parser.add_argument("--runs", type=int, default=5, help="Number of runs per model")
+    parser.add_argument("--weeks", type=int, default=52, help="Number of weeks per simulation")
+    parser.add_argument("--models", type=str, default=None, help="Comma-separated list of models (default: all nan chat models)")
+    parser.add_argument("--seed", type=int, default=42, help="Base random seed. Run i uses seed = seed + i (identical seeds across models for a fair paired comparison)")
+    parser.add_argument("--workers", type=int, default=8, help="Number of simulations to run in parallel")
+    return parser.parse_args()
 
-    print(f"=== LLM Vending Machine Benchmarking Pipeline ({args.mode.upper()} Mode) ===\n")
 
-    # Configuration for the benchmark
-    MODELS_TO_TEST = [
-        "xiaomi/mimo-v2-flash:free",
-        "nvidia/nemotron-3-nano-30b-a3b:free",
-        "mistralai/devstral-2512:free",
-        "nex-agi/deepseek-v3.1-nex-n1:free"
+def run_single(model, weeks, seed, mode):
+    """Run one simulation as a subprocess and return the parsed JSON result."""
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+    env["PYTHONUNBUFFERED"] = "1"
+
+    cmd = [
+        "python3", "src/agentic_run.py",
+        "--model", model,
+        "--weeks", str(weeks),
+        "--mode", mode,
+        "--json-output",
+        "--seed", str(seed),
     ]
-    
-    RUNS_PER_MODEL = 5  # Set to a higher number for a real benchmark
-    
-    all_raw_results = []
-    all_summary_results = []
 
-    print(f"Benchmark Configuration:")
-    print(f"- Models: {len(MODELS_TO_TEST)}")
-    print(f"- Runs per model: {RUNS_PER_MODEL}")
-    print(f"- Total simulations: {len(MODELS_TO_TEST) * RUNS_PER_MODEL}\n")
+    # 90-minute hard timeout per run to prevent infinite hangs
+    proc = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=5400)
 
-    for model in MODELS_TO_TEST:
-        print(f"\n--- Benchmarking Model: {model} ---")
-        model_results = []
-        
-        for i in range(1, RUNS_PER_MODEL + 1):
-            print(f"Run {i}/{RUNS_PER_MODEL} for {model}...")
-            try:
-                # Explicitly notify that we are waiting for the LLM during the benchmark
-                print(f"  [Status] Simulating competitive run in subprocess...")
-                
-                # Command to run competitive_run.py as a subprocess
-                # We need to set PYTHONPATH to include current dir so imports work in subprocess
-                env = os.environ.copy()
-                env["PYTHONPATH"] = os.getcwd()
+    if proc.returncode != 0:
+        raise RuntimeError(f"Process failed with return code {proc.returncode}: {proc.stderr[-1500:]}")
 
-                cmd = [
-                    "python3", "src/agentic_run.py",
-                    "--model", model,
-                    "--weeks", "52",
-                    "--mode", args.mode,
-                    "--json-output"
-                ]
+    output = proc.stdout.strip()
+    lines = [l for l in output.splitlines() if l.strip()]
+    if not lines:
+        raise RuntimeError(f"No output produced. Stderr: {proc.stderr[-1500:]}")
 
-                # Run with timeout to prevent infinite hangs (e.g. 60 minutes limit per run)
-                # capture_output=True captures stdout/stderr
-                proc = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=3600)
+    try:
+        return json.loads(lines[-1])
+    except json.JSONDecodeError:
+        # Fallback: try to parse the whole output as JSON
+        return json.loads(output)
 
-                if proc.returncode != 0:
-                    print(f"  [Error] Process failed with return code {proc.returncode}")
-                    print(f"  Stderr: {proc.stderr}")
-                    continue
 
-                # Parse the JSON output from stdout
-                # The script might output other things if verbose, but we suppressed it with default logic
-                # However, if any other libraries print to stdout, we might need to be careful.
-                # We expect the last line (or the whole output) to be valid JSON if logic holds.
-                # Let's try to find the JSON blob.
-                output = proc.stdout.strip()
-                # Find the last line that looks like JSON or try to parse the whole thing
-                try:
-                    # In our competitive_run, we print json.dumps(result) at the very end
-                    # But there could be other prints if libraries are noisy.
-                    # Let's try to parse the last non-empty line
-                    lines = output.splitlines()
-                    json_line = lines[-1] if lines else ""
-                    result = json.loads(json_line)
-                except json.JSONDecodeError:
-                    # Fallback: try to find start of json
-                    print(f"  [Warning] Could not parse JSON from last line. Raw output length: {len(output)}")
-                    # Try to parse the whole output if it's just JSON
-                    result = json.loads(output)
-                
-                model_results.append(result)
-                print(f"  [Success] Run completed.")
-                
-                # Collect raw results for this run (one row per week)
-                for week_data in result.get("weekly_stats", []):
-                    all_raw_results.append({
-                        "timestamp": result.get("timestamp"),
-                        "model": model,
-                        "run_index": i,
-                        "week": week_data["week"],
-                        "basic_profit": week_data["basic_profit"],
-                        "llm_profit": week_data["llm_profit"],
-                        "basic_avg_price": week_data["basic_avg_price"],
-                        "llm_avg_price": week_data["llm_avg_price"],
-                        "basic_avg_stock": week_data["basic_avg_stock"],
-                        "llm_avg_stock": week_data["llm_avg_stock"]
-                    })
-                
-                # Small sleep to avoid hitting OpenRouter rate limits too hard
-                time.sleep(2)
-            except subprocess.TimeoutExpired:
-                print(f"  [Error] Run {i} for {model} timed out!")
-            except Exception as e:
-                print(f"  [Error] Exception during run {i} for {model}: {e}")
-        
-        if model_results:
-            # Aggregate results for this model
-            # Note: result values are strings in the JSON from competitive_run (formatted), need casting
-            # modifying extraction to handle string or float logic if needed. 
-            # Actually competitive_run returns floats in 'basic_profit', 'llm_profit' at top level
-            avg_basic = sum(float(r['basic_profit']) for r in model_results) / len(model_results)
-            avg_llm = sum(float(r['llm_profit']) for r in model_results) / len(model_results)
-            wins = sum(1 for r in model_results if float(r['llm_profit']) > float(r['basic_profit']))
-            
-            all_summary_results.append({
-                "model": model,
-                "avg_basic_profit": avg_basic,
-                "avg_llm_profit": avg_llm,
-                "win_rate": (wins / len(model_results)) * 100,
-                "total_runs": len(model_results)
-            })
+def aggregate_model_results(model, results):
+    """Compute aggregated stats (including dispersion) for one model."""
+    llm_profits = [float(r["llm_profit"]) for r in results]
+    basic_profits = [float(r["basic_profit"]) for r in results]
+    margins = [l - b for l, b in zip(llm_profits, basic_profits)]
+    wins = sum(1 for m in margins if m > 0)
 
-    # Sort summary results by average LLM profit descending
-    sorted_summary = sorted(all_summary_results, key=lambda x: x['avg_llm_profit'], reverse=True)
+    def stats(values):
+        return {
+            "mean": statistics.mean(values),
+            "median": statistics.median(values),
+            "stdev": statistics.stdev(values) if len(values) > 1 else 0.0,
+            "min": min(values),
+            "max": max(values),
+        }
 
-    # Display Summary Table
-    print("\n" + "="*80)
-    print(f"{'Benchmarking Summary':^80}")
-    print("="*80)
-    print(f"{'Model Name':<45} | {'Avg Basic':<10} | {'Avg LLM':<10} | {'Win %':<6}")
-    print("-" * 80)
-    
+    llm_stats = stats(llm_profits)
+    basic_stats = stats(basic_profits)
+    margin_stats = stats(margins)
+
+    return {
+        "model": model,
+        "total_runs": len(results),
+        "llm_profit_mean": round(llm_stats["mean"], 2),
+        "llm_profit_stdev": round(llm_stats["stdev"], 2),
+        "llm_profit_min": round(llm_stats["min"], 2),
+        "llm_profit_max": round(llm_stats["max"], 2),
+        "llm_profit_median": round(llm_stats["median"], 2),
+        "basic_profit_mean": round(basic_stats["mean"], 2),
+        "basic_profit_stdev": round(basic_stats["stdev"], 2),
+        "margin_mean": round(margin_stats["mean"], 2),
+        "margin_stdev": round(margin_stats["stdev"], 2),
+        "margin_min": round(margin_stats["min"], 2),
+        "margin_max": round(margin_stats["max"], 2),
+        "win_rate": round((wins / len(results)) * 100, 1),
+    }
+
+
+def print_summary(sorted_summary):
+    print("\n" + "=" * 115)
+    print(f"{'Benchmarking Summary (aggregated over runs)':^115}")
+    print("=" * 115)
+    header = (f"{'Model':<28} | {'Runs':<4} | {'LLM mean':<10} | {'LLM ±σ':<10} | "
+              f"{'LLM min-max':<17} | {'Basic mean':<10} | {'Margin ±σ':<10} | {'Win %':<6}")
+    print(header)
+    print("-" * 115)
     for res in sorted_summary:
-        print(f"{res['model']:<45} | {res['avg_basic_profit']:<10.2f} | {res['avg_llm_profit']:<10.2f} | {res['win_rate']:<6.1f}%")
-    
-    print("="*80)
+        minmax = f"[{res['llm_profit_min']:.0f}, {res['llm_profit_max']:.0f}]"
+        print(f"{res['model']:<28} | {res['total_runs']:<4} | {res['llm_profit_mean']:<10.2f} | "
+              f"{res['llm_profit_stdev']:<10.2f} | {minmax:<17} | {res['basic_profit_mean']:<10.2f} | "
+              f"{res['margin_stdev']:<10.2f} | {res['win_rate']:<6.1f}%")
+    print("=" * 115)
+
+
+def main():
+    args = parse_args()
+
+    models = args.models.split(",") if args.models else list(NAN_CHAT_MODELS)
+    # Treat "default" as a placeholder for the configured default model
+    models = [DEFAULT_MODEL if m.strip() == "default" else m.strip() for m in models]
+
+    total = len(models) * args.runs
+    print(f"=== LLM Vending Machine Benchmarking Pipeline ({args.mode.upper()} Mode) ===\n")
+    print("Benchmark Configuration:")
+    print(f"- Models: {len(models)} -> {models}")
+    print(f"- Runs per model: {args.runs}")
+    print(f"- Weeks per run: {args.weeks}")
+    print(f"- Seeds: {args.seed}..{args.seed + args.runs - 1} (same seeds across models)")
+    print(f"- Parallel workers: {args.workers}")
+    print(f"- Total simulations: {total}\n")
+
+    # (model, run_index) -> seed; identical seeds across models = paired comparison
+    jobs = [(model, i, args.seed + i) for model in models for i in range(1, args.runs + 1)]
+
+    results_by_model = {m: [] for m in models}
+    raw_rows = []
+    failures = []
+    done_count = 0
+
+    def execute_jobs(job_list):
+        nonlocal done_count
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = {
+                pool.submit(run_single, model, args.weeks, seed, args.mode): (model, i, seed)
+                for model, i, seed in job_list
+            }
+            for future in as_completed(futures):
+                model, i, seed = futures[future]
+                done_count += 1
+                try:
+                    result = future.result()
+                    results_by_model[model].append(result)
+                    print(f"[{done_count}/{total}] OK {model} run={i} seed={seed} "
+                          f"basic={float(result['basic_profit']):.2f} llm={float(result['llm_profit']):.2f}", flush=True)
+
+                    for week_data in result.get("weekly_stats", []):
+                        raw_rows.append({
+                            "timestamp": result.get("timestamp"),
+                            "model": model,
+                            "run_index": i,
+                            "seed": seed,
+                            "week": week_data["week"],
+                            "basic_profit": week_data["basic_profit"],
+                            "llm_profit": week_data["llm_profit"],
+                            "basic_avg_price": week_data["basic_avg_price"],
+                            "llm_avg_price": week_data["llm_avg_price"],
+                            "basic_avg_stock": week_data["basic_avg_stock"],
+                            "llm_avg_stock": week_data["llm_avg_stock"]
+                        })
+                except subprocess.TimeoutExpired:
+                    failures.append((model, i, seed, "timeout"))
+                    print(f"[{done_count}/{total}] TIMEOUT {model} run={i} seed={seed}", flush=True)
+                except Exception as e:
+                    failures.append((model, i, seed, str(e)[:200]))
+                    print(f"[{done_count}/{total}] ERROR {model} run={i} seed={seed}: {str(e)[:200]}", flush=True)
+
+    execute_jobs(jobs)
+
+    # Retry failed jobs once (transient API errors / gateway timeouts)
+    if failures:
+        retriable = [(m, i, s) for m, i, s, _ in failures]
+        failures.clear()
+        print(f"\n[Retry] Retrying {len(retriable)} failed run(s)...")
+        done_count = 0
+        total = len(retriable)
+        execute_jobs(retriable)
+
+    if failures:
+        print(f"\n[Warning] {len(failures)} run(s) failed:")
+        for model, i, seed, err in failures:
+            print(f"  - {model} run={i} seed={seed}: {err}")
+
+    all_summary_results = [
+        aggregate_model_results(model, results)
+        for model, results in results_by_model.items() if results
+    ]
+    sorted_summary = sorted(all_summary_results, key=lambda x: x["llm_profit_mean"], reverse=True)
+    print_summary(sorted_summary)
 
     # Persistence
     os.makedirs(BENCHMARKS_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # 1. Save Raw Results
-    raw_path = os.path.join(BENCHMARKS_DIR, f"benchmark_raw_{timestamp}.csv")
-    with open(raw_path, mode='w', newline='') as f:
-        if all_raw_results:
-            writer = csv.DictWriter(f, fieldnames=all_raw_results[0].keys())
-            writer.writeheader()
-            writer.writerows(all_raw_results)
 
-    # 2. Save Summary Results
+    raw_path = os.path.join(BENCHMARKS_DIR, f"benchmark_raw_{timestamp}.csv")
+    with open(raw_path, mode="w", newline="") as f:
+        if raw_rows:
+            writer = csv.DictWriter(f, fieldnames=raw_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(raw_rows)
+
     summary_path = os.path.join(BENCHMARKS_DIR, f"benchmark_summary_{timestamp}.csv")
-    with open(summary_path, mode='w', newline='') as f:
+    with open(summary_path, mode="w", newline="") as f:
         if sorted_summary:
             writer = csv.DictWriter(f, fieldnames=sorted_summary[0].keys())
             writer.writeheader()
             writer.writerows(sorted_summary)
-    
+
     print(f"\nBenchmark completed.")
     print(f"- Raw results saved: {raw_path}")
     print(f"- Summary report saved: {summary_path}")
+
 
 if __name__ == "__main__":
     main()

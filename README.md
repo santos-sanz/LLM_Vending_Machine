@@ -70,8 +70,12 @@ LLM_Vending_Machine/
 3. **Configure Environment**:
    Create a `.env` file in the root directory:
    ```env
+   # nan API (default provider, OpenAI-compatible)
+   NAN_API_KEY=sk-your-nan-key
+   NAN_BASE_URL=https://api.nan.builders/v1
+   # OpenRouter (for "decisions" modality models)
    OPENROUTER_API_KEY=sk-or-your-key-here
-   DEFAULT_MODEL=mistralai/mistral-7b-instruct:free
+   DEFAULT_MODEL=deepseek-v4-flash
    ```
 
 ## 🎮 Running Simulations
@@ -86,15 +90,25 @@ python3 src/agentic_run.py --model mistralai/mistral-large-latest --weeks 52
 ```
 
 ### 2. Standard Benchmarking
-Run a batch of simulations to statistically validate a model's performance (e.g., 5 runs of 52 weeks).
+Run a batch of simulations to statistically validate a model's performance. Each model runs N times with **paired seeds** (every model faces the same seeded demand sequences), and results are aggregated with dispersion statistics (mean, σ, min/max, 95% CI, win rate).
 
 ```bash
-# Run agentic benchmarks
-python3 src/benchmark.py --mode agentic
+# Benchmark all configured models (nan chat models + OpenRouter decision models):
+python3 src/benchmark.py --runs 5 --weeks 52 --workers 20
 
-# Run legacy benchmarks
-python3 src/benchmark.py --mode legacy
+# Or a custom subset:
+python3 src/benchmark.py --models "deepseek-v4-flash,typesafe/jev-1.13" --runs 5 --seed 42
+
+# Aggregate a raw CSV into a dispersion report (Markdown + console tables):
+python3 scripts/analyze_benchmark.py --raw data/benchmarks/benchmark_raw_<ts>.csv
+
+# Merge shards from multiple runs before analysis:
+python3 scripts/merge_benchmarks.py --inputs raw1.csv,raw2.csv --output combined.csv
 ```
+
+**Model providers**:
+- **nan API (chat models)**: `deepseek-v4-flash`, `qwen3.8-flash`, `glm5.3-flash`, `qwen3.6` — free-form JSON tool calling over `chat/completions`. "Thinking" models are bounded via per-model generation overrides to avoid gateway timeouts.
+- **OpenRouter (decision models)**: `typesafe/jev-1.13`, `perplexity/pplx-decider-v1.1-27b`, `openai/gpt-6-luna-decisions`, `cloudflare/clef-flash`, `inception/mercury-decide:free` — the top-5 weekly `decisions` modality models. They do not support `chat/completions`; the agent drives them through `POST /api/alpha/decisions` with one structured `choice` question per product over a symmetric price-action menu (keep / ±7.5% / ±15%).
 
 ### 3. Legacy One-vs-One
 The original simulation loop without LangGraph. Good for quick debugging.

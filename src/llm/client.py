@@ -1,13 +1,11 @@
 import os
-import torch
 from openai import OpenAI
-from src.config import OPENROUTER_API_KEY, DEFAULT_MODEL
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from src.config import OPENROUTER_API_KEY, DEFAULT_MODEL, NAN_BASE_URL
 
 class OpenRouterClient:
-    def __init__(self, api_key=None, base_url="https://openrouter.ai/api/v1"):
+    def __init__(self, api_key=None, base_url=None):
         self.api_key = api_key or OPENROUTER_API_KEY
-        self.base_url = base_url
+        self.base_url = base_url or NAN_BASE_URL
         self.client = None
         if self.api_key:
             self.client = OpenAI(
@@ -111,6 +109,10 @@ class OllamaClient:
 class HuggingFaceClient:
     """Client for local model inference using Hugging Face Transformers."""
     def __init__(self, model_name=None, device=None, token=None):
+        # Lazy imports: torch/transformers are heavy and only needed for local HF inference.
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
         self.model_name = model_name or "HuggingFaceTB/SmolLM3-3B"
         self.token = token or os.getenv("HUGGINGFACE_TOKEN")
         self.device = device or ("mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
