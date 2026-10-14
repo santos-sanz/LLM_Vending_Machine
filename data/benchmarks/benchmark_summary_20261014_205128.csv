@@ -1,0 +1,6 @@
+model,model_type,total_runs,llm_profit_mean,llm_profit_stdev,llm_profit_min,llm_profit_max,llm_profit_median,basic_profit_mean,basic_profit_stdev,margin_mean,margin_stdev,margin_min,margin_max,win_rate
+upstage/solar-decide,decider,5,1156.51,442.34,609.67,1669.24,1274.63,411.91,47.01,744.6,399.48,253.67,1184.94,100.0
+microsoft/microsoft-decision-1,decider,5,281.97,38.91,224.15,322.17,281.65,297.14,23.68,-15.17,41.09,-65.4,34.57,40.0
+nace-ai/drex-v1.5,decider,5,277.44,33.88,224.15,309.95,281.65,297.14,23.68,-19.7,35.97,-65.4,22.35,20.0
+liquid/d1,decider,5,277.44,33.88,224.15,309.95,281.65,297.14,23.68,-19.7,35.97,-65.4,22.35,20.0
+cloudflare/clef,decider,5,245.68,35.2,193.9,283.34,260.92,293.54,23.37,-47.86,41.29,-104.02,-1.21,0.0

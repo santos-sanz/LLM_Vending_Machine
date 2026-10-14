@@ -50,16 +50,32 @@ NAN_CHAT_MODELS = [
     "qwen3.6",
 ]
 
-# Top-5 weekly "decisions" models on OpenRouter (output_modalities=decisions,
-# ordered by https://openrouter.ai/models?order=top-weekly). These models do
-# not accept chat/completions; they are driven through POST /api/alpha/decisions.
+# OpenRouter "decisions" models benchmarked so far: the top-5 weekly
+# (output_modalities=decisions, ordered by
+# https://openrouter.ai/models?order=top-weekly) plus the next five of that
+# ranking. These models do not accept chat/completions; they are driven
+# through POST /api/alpha/decisions.
 OPENROUTER_DECISION_MODELS = [
     "typesafe/jev-1.13",
     "perplexity/pplx-decider-v1.1-27b",
     "openai/gpt-6-luna-decisions",
     "cloudflare/clef-flash",
     "inception/mercury-decide:free",
+    "nace-ai/drex-v1.5",
+    "microsoft/microsoft-decision-1",
+    "liquid/d1",
+    "cloudflare/clef",
+    "upstage/solar-decide",
 ]
+
+# Models routed through the OpenRouter Decisions API are reported as
+# "decider" in benchmark outputs; every other model is a "standard" LLM.
+DECIDER_MODEL_TYPE = "decider"
+STANDARD_MODEL_TYPE = "standard"
+
+
+def model_type(model):
+    return DECIDER_MODEL_TYPE if model in OPENROUTER_DECISION_MODELS else STANDARD_MODEL_TYPE
 
 # Per-model generation overrides (applied by agentic_run via ChatOpenAI kwargs).
 # Several nan models are "reasoning" models that otherwise generate very long

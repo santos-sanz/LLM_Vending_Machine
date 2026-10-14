@@ -8,7 +8,7 @@ import statistics
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-from src.config import BENCHMARKS_DIR, NAN_CHAT_MODELS, DEFAULT_MODEL
+from src.config import BENCHMARKS_DIR, NAN_CHAT_MODELS, DEFAULT_MODEL, model_type
 
 
 def parse_args():
@@ -77,6 +77,7 @@ def aggregate_model_results(model, results):
 
     return {
         "model": model,
+        "model_type": model_type(model),
         "total_runs": len(results),
         "llm_profit_mean": round(llm_stats["mean"], 2),
         "llm_profit_stdev": round(llm_stats["stdev"], 2),
@@ -97,13 +98,13 @@ def print_summary(sorted_summary):
     print("\n" + "=" * 115)
     print(f"{'Benchmarking Summary (aggregated over runs)':^115}")
     print("=" * 115)
-    header = (f"{'Model':<28} | {'Runs':<4} | {'LLM mean':<10} | {'LLM ±σ':<10} | "
+    header = (f"{'Model':<28} | {'Type':<4} | {'Runs':<4} | {'LLM mean':<10} | {'LLM ±σ':<10} | "
               f"{'LLM min-max':<17} | {'Basic mean':<10} | {'Margin ±σ':<10} | {'Win %':<6}")
     print(header)
     print("-" * 115)
     for res in sorted_summary:
         minmax = f"[{res['llm_profit_min']:.0f}, {res['llm_profit_max']:.0f}]"
-        print(f"{res['model']:<28} | {res['total_runs']:<4} | {res['llm_profit_mean']:<10.2f} | "
+        print(f"{res['model']:<28} | {res['model_type'][:4]:<4} | {res['total_runs']:<4} | {res['llm_profit_mean']:<10.2f} | "
               f"{res['llm_profit_stdev']:<10.2f} | {minmax:<17} | {res['basic_profit_mean']:<10.2f} | "
               f"{res['margin_stdev']:<10.2f} | {res['win_rate']:<6.1f}%")
     print("=" * 115)
