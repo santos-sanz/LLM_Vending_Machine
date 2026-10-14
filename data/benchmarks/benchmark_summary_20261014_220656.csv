@@ -1,0 +1,11 @@
+model,model_type,total_runs,llm_profit_mean,llm_profit_stdev,llm_profit_min,llm_profit_max,llm_profit_median,basic_profit_mean,basic_profit_stdev,margin_mean,margin_stdev,margin_min,margin_max,win_rate
+cloudflare/clef,decider,5,2450.68,123.53,2346.05,2653.95,2430.64,486.27,23.0,1964.41,128.27,1846.24,2157.35,100.0
+openai/gpt-6-luna-decisions,decider,5,709.65,122.44,544.4,867.58,727.36,714.78,25.97,-5.13,121.99,-139.85,172.53,60.0
+nace-ai/drex-v1.5,decider,5,399.37,92.46,281.31,493.2,415.89,315.5,25.25,83.87,83.15,-8.46,180.7,80.0
+liquid/d1,decider,5,277.0,33.4,225.73,309.95,282.19,297.14,23.68,-20.14,36.79,-68.96,22.35,20.0
+inception/mercury-decide:free,decider,5,261.54,35.4,208.65,296.31,257.6,296.45,23.68,-34.91,36.52,-80.52,8.71,20.0
+typesafe/jev-1.13,decider,5,261.32,36.28,204.76,293.62,278.75,295.89,23.72,-34.57,40.88,-87.85,8.12,20.0
+cloudflare/clef-flash,decider,5,207.85,33.99,155.4,240.51,217.93,292.71,23.48,-84.86,39.64,-135.49,-44.04,0.0
+perplexity/pplx-decider-v1.1-27b,decider,5,22.14,20.45,-1.92,39.28,35.04,283.77,23.11,-261.63,32.99,-317.45,-234.64,0.0
+microsoft/microsoft-decision-1,decider,5,-140.48,71.07,-226.22,-78.29,-101.64,271.7,20.74,-412.18,83.86,-529.62,-340.49,0.0
+upstage/solar-decide,decider,5,-169.6,25.69,-200.44,-141.43,-160.56,278.22,22.32,-447.82,25.21,-472.56,-410.38,0.0

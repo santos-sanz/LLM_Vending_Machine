@@ -17,7 +17,7 @@ from src.models.vending_machine import VendingMachine
 from src.simulation.engine import simulate_competitive_week
 from src.llm.client import OpenRouterClient
 from src.llm.tools import VendingMachineTools
-from src.llm.decisions import build_decision_questions, call_decision_model, answers_to_price_actions
+from src.llm.decisions import decide_prices_for_week, answers_to_price_actions
 from src.config import (
     DEFAULT_MODEL,
     COMPETITION_PRODUCT_CONFIGS,
@@ -151,32 +151,17 @@ def decision_model_node(state: AgentState):
         content = json.dumps({"analysis": "Final week completed; no further actions allowed.", "action": "next_week"})
         return {"messages": [AIMessage(content=content)]}
 
-    state_payload = {
-        "week": week,
-        "stockout_events_last_week": stockout_events or ["No products ran out of stock."],
-        "market_data": market_data,
-        "context": (
-            "You are the Strategic Business Manager of 'LLMMachine', competing with 'BasicMachine'. "
-            "Machines are refilled to max capacity every week. BasicMachine never changes prices. "
-            "Both machines share the same client pool; clients pick products with the best value. "
-            "Maximize NET PROFIT (margin x volume), not revenue or volume."
-        ),
-    }
-
-    llm_products = list(market_data.get("LLMMachine", {}).get("products", {}).keys())
-    questions = build_decision_questions(llm_products)
-
     if state['verbose']:
         print(f"\n[Decision Agent] Consulting {target_model} for Week {week}...")
 
     import time as _time
     answers = None
-    for attempt in range(4):
+    for attempt in range(3):
         try:
-            answers = call_decision_model(target_model, questions, state_payload)
+            answers = decide_prices_for_week(target_model, market_data, stockout_events, week)
             break
         except Exception as e:
-            if attempt < 3:
+            if attempt < 2:
                 wait = (attempt + 1) * 10
                 print(f"[Decision Agent] Call failed ({str(e)[:140]}). Retrying in {wait}s...")
                 _time.sleep(wait)
