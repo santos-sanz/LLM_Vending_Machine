@@ -108,7 +108,7 @@ python3 scripts/merge_benchmarks.py --inputs raw1.csv,raw2.csv --output combined
 
 **Model providers**:
 - **nan API (chat models)**: `deepseek-v4-flash`, `qwen3.8-flash`, `glm5.3-flash`, `qwen3.6` — free-form JSON tool calling over `chat/completions`. "Thinking" models are bounded via per-model generation overrides to avoid gateway timeouts.
-- **OpenRouter (decision models)**: `typesafe/jev-1.13`, `perplexity/pplx-decider-v1.1-27b`, `openai/gpt-6-luna-decisions`, `cloudflare/clef-flash`, `inception/mercury-decide:free` — the top-5 weekly `decisions` modality models. They do not support `chat/completions`; the agent drives them through `POST /api/alpha/decisions` with one structured `choice` question per product over a symmetric price-action menu (keep / ±7.5% / ±15%).
+- **OpenRouter (decision models)**: the top-10 weekly `decisions` modality models (e.g. `typesafe/jev-1.13`, `perplexity/pplx-decider-v1.1-27b`, `openai/gpt-6-luna-decisions`, `cloudflare/clef-flash`, `inception/mercury-decide:free`, `nace-ai/drex-v1.5`, `microsoft/microsoft-decision-1`, `liquid/d1`, `cloudflare/clef`, `upstage/solar-decide`). They do not support `chat/completions`; the agent drives them through `POST /api/alpha/decisions` with one structured `choice` question per product over a symmetric price-action menu (keep / ±7.5% / ±15%). Benchmark reports tag each model with its `model_type` (`decider` vs `standard`).
 
 ### 3. Legacy One-vs-One
 The original simulation loop without LangGraph. Good for quick debugging.

@@ -9,10 +9,14 @@ Usage:
     python3 scripts/analyze_benchmark.py --raw <csv> --weeks 52 --seed-base 42 --runs 5
 """
 import os
+import sys
 import csv
 import argparse
 import statistics
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.config import model_type
 
 # Two-sided t critical values for 95% CI with n-1 dof (small samples)
 T_CRITICAL_95 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447,
@@ -67,6 +71,7 @@ def summarize_model(model, run_finals, run_margins, run_prices, seeds):
     wins = sum(1 for m in run_margins if m > 0)
     return {
         "model": model,
+        "model_type": model_type(model),
         "seeds": sorted(set(seeds)),
         "llm": llm,
         "margin": margin,
@@ -107,21 +112,21 @@ def main():
     summaries.sort(key=lambda s: s["llm"]["mean"], reverse=True)
 
     # --- Console table ---
-    print("=" * 108)
-    print(f"{'AGGREGATED BENCHMARK (dispersion across runs)':^108}")
-    print("=" * 108)
-    print(f"{'Model':<26} | {'N':<2} | {'Mean':>9} | {'±σ':>7} | {'95% CI':>15} | {'Median':>9} | {'Min':>8} | {'Max':>8} | {'Win%':>5}")
-    print("-" * 108)
+    print("=" * 116)
+    print(f"{'AGGREGATED BENCHMARK (dispersion across runs)':^116}")
+    print("=" * 116)
+    print(f"{'Model':<26} | {'Type':<5} | {'N':<2} | {'Mean':>9} | {'±σ':>7} | {'95% CI':>15} | {'Median':>9} | {'Min':>8} | {'Max':>8} | {'Win%':>5}")
+    print("-" * 116)
     for s in summaries:
         lo, hi = s["llm"]["mean"] - s["llm"]["ci95"], s["llm"]["mean"] + s["llm"]["ci95"]
-        print(f"{s['model']:<26} | {s['n_runs']:<2} | {fmt(s['llm']['mean']):>9} | {fmt(s['llm']['stdev']):>7} | "
+        print(f"{s['model']:<26} | {s['model_type']:<5} | {s['n_runs']:<2} | {fmt(s['llm']['mean']):>9} | {fmt(s['llm']['stdev']):>7} | "
               f"[{fmt(lo)}, {fmt(hi)}] | {fmt(s['llm']['median']):>9} | {fmt(s['llm']['min']):>8} | {fmt(s['llm']['max']):>8} | {s['win_rate']:>4.0f}%")
-    print("-" * 108)
+    print("-" * 116)
     print(f"{'Model':<26} | {'Margin mean':>11} | {'Margin ±σ':>9} | {'Margin min-max':>17} | {'Avg final price':>15} | {'Wins':>5}")
     for s in summaries:
         print(f"{s['model']:<26} | {fmt(s['margin']['mean']):>11} | {fmt(s['margin']['stdev']):>9} | "
               f"[{fmt(s['margin']['min'])}, {fmt(s['margin']['max'])}] | {fmt(s['prices']['mean'], 2):>15} | {s['wins']:>2}/{s['n_runs']}")
-    print("=" * 108)
+    print("=" * 116)
 
     # --- Markdown report ---
     best = summaries[0]
@@ -131,7 +136,7 @@ def main():
     lines.append(f"- Source: `{args.raw}`")
     lines.append(f"- Simulation: agentic (LangGraph) mode, {args.weeks} weeks per run, LLMMachine vs static BasicMachine")
     lines.append(f"- Reproducibility: {args.runs} runs per model with paired seeds `{args.seed_base}..{args.seed_base + args.runs - 1}` (every model faces the same seeded demand sequences)")
-    lines.append(f"- Providers: nan API (chat models via chat/completions) and OpenRouter (top-5 weekly "
+    lines.append(f"- Providers: nan API (chat models via chat/completions) and OpenRouter (the top-10 weekly "
                  f"`decisions` models via POST /api/alpha/decisions, adapted to a symmetric ±7.5%/±15% "
                  f"price-action menu per product)")
     lines.append(f"- Exclusions: mimo-v2.6-flash (nan allowance exhausted), minimax-h3 (no key access), "
@@ -140,20 +145,20 @@ def main():
     lines.append("")
     lines.append("## Final net profit per model (aggregate over runs)")
     lines.append("")
-    lines.append("| Model | N | Mean | ±σ | 95% CI | Median | Min | Max | Win rate |")
-    lines.append("|---|---|---:|---:|---|---:|---:|---:|---:|")
+    lines.append("| Model | Type | N | Mean | ±σ | 95% CI | Median | Min | Max | Win rate |")
+    lines.append("|---|---|---|---:|---:|---|---:|---:|---:|---:|")
     for s in summaries:
         lo, hi = s["llm"]["mean"] - s["llm"]["ci95"], s["llm"]["mean"] + s["llm"]["ci95"]
-        lines.append(f"| `{s['model']}` | {s['n_runs']} | {fmt(s['llm']['mean'], 1)} | {fmt(s['llm']['stdev'], 1)} "
+        lines.append(f"| `{s['model']}` | {s['model_type']} | {s['n_runs']} | {fmt(s['llm']['mean'], 1)} | {fmt(s['llm']['stdev'], 1)} "
                      f"| [{fmt(lo)}, {fmt(hi)}] | {fmt(s['llm']['median'], 1)} | {fmt(s['llm']['min'], 1)} "
                      f"| {fmt(s['llm']['max'], 1)} | {s['win_rate']:.0f}% ({s['wins']}/{s['n_runs']}) |")
     lines.append("")
     lines.append("## Head-to-head margin vs BasicMachine (LLM profit − Basic profit, final week)")
     lines.append("")
-    lines.append("| Model | Margin mean | ±σ | Min | Max | Wins |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
+    lines.append("| Model | Type | Margin mean | ±σ | Min | Max | Wins |")
+    lines.append("|---|---|---:|---:|---:|---:|---:|")
     for s in summaries:
-        lines.append(f"| `{s['model']}` | {fmt(s['margin']['mean'], 1)} | {fmt(s['margin']['stdev'], 1)} "
+        lines.append(f"| `{s['model']}` | {s['model_type']} | {fmt(s['margin']['mean'], 1)} | {fmt(s['margin']['stdev'], 1)} "
                      f"| {fmt(s['margin']['min'], 1)} | {fmt(s['margin']['max'], 1)} | {s['wins']}/{s['n_runs']} |")
     lines.append("")
     lines.append("## Per-run detail (final week)")
