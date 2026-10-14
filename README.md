@@ -102,9 +102,14 @@ python3 src/benchmark.py --models "deepseek-v4-flash,typesafe/jev-1.13" --runs 5
 # Aggregate a raw CSV into a dispersion report (Markdown + console tables):
 python3 scripts/analyze_benchmark.py --raw data/benchmarks/benchmark_raw_<ts>.csv
 
+# Consolidated final ranking (type, strategy, insights) from a merged CSV:
+python3 scripts/final_ranking.py --raw data/benchmarks/benchmark_combined_<date>_full.csv
+
 # Merge shards from multiple runs before analysis:
 python3 scripts/merge_benchmarks.py --inputs raw1.csv,raw2.csv --output combined.csv
 ```
+
+> 📊 **Latest results**: see [`data/benchmarks/benchmark_final_ranking_20261014.md`](data/benchmarks/benchmark_final_ranking_20261014.md) — 14 models ranked (champion: `cloudflare/clef`, 2,451 ± 124, 100% win rate).
 
 **Model providers**:
 - **nan API (chat models)**: `deepseek-v4-flash`, `qwen3.8-flash`, `glm5.3-flash`, `qwen3.6` — free-form JSON tool calling over `chat/completions`. "Thinking" models are bounded via per-model generation overrides to avoid gateway timeouts.
