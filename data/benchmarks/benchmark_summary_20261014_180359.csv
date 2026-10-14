@@ -1,0 +1,5 @@
+model,total_runs,llm_profit_mean,llm_profit_stdev,llm_profit_min,llm_profit_max,llm_profit_median,basic_profit_mean,basic_profit_stdev,margin_mean,margin_stdev,margin_min,margin_max,win_rate
+glm5.3-flash,5,1288.97,409.55,754.73,1876.8,1280.4,342.95,39.13,946.02,375.78,457.38,1490.35,100.0
+deepseek-v4-flash,5,1134.65,435.84,553.5,1749.3,1167.3,329.81,23.2,804.84,430.59,207.15,1397.25,100.0
+qwen3.8-flash,5,728.33,267.23,312.0,1034.1,737.82,315.14,17.51,413.19,276.42,-24.6,724.75,80.0
+qwen3.6,5,443.04,35.85,407.76,490.97,427.47,303.37,22.32,139.67,54.36,68.16,199.97,100.0

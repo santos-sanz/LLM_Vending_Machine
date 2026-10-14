@@ -1,0 +1,6 @@
+model,total_runs,llm_profit_mean,llm_profit_stdev,llm_profit_min,llm_profit_max,llm_profit_median,basic_profit_mean,basic_profit_stdev,margin_mean,margin_stdev,margin_min,margin_max,win_rate
+perplexity/pplx-decider-v1.1-27b,5,1856.88,92.06,1728.87,1966.26,1880.37,435.6,24.11,1421.28,80.53,1327.37,1508.56,100.0
+openai/gpt-6-luna-decisions,5,1461.4,313.69,1024.74,1872.3,1450.69,379.41,35.82,1081.99,299.85,685.79,1468.35,100.0
+typesafe/jev-1.13,5,277.44,33.88,224.15,309.95,281.65,297.14,23.68,-19.7,35.97,-65.4,22.35,20.0
+inception/mercury-decide:free,5,277.08,35.71,222.99,312.05,276.19,296.51,23.84,-19.43,37.32,-66.74,20.25,40.0
+cloudflare/clef-flash,5,269.41,92.89,142.71,386.93,248.43,293.19,26.25,-23.78,87.94,-118.39,100.88,40.0
